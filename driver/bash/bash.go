@@ -2,8 +2,8 @@
 package bash
 
 import (
-	"github.com/dimag-jfrog/migrate/driver"
-	"github.com/dimag-jfrog/migrate/file"
+	"github.com/JFrogDev/go-dbmigrate/driver"
+	"github.com/JFrogDev/go-dbmigrate/file"
 )
 
 type Driver struct {

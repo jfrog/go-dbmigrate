@@ -3,13 +3,13 @@ package example
 import (
 	"testing"
 
-	"github.com/dimag-jfrog/migrate/file"
-	"github.com/dimag-jfrog/migrate/migrate/direction"
+	"github.com/JFrogDev/go-dbmigrate/file"
+	"github.com/JFrogDev/go-dbmigrate/migrate/direction"
 
-	"github.com/dimag-jfrog/migrate/driver"
-	"github.com/dimag-jfrog/migrate/driver/mongodb"
-	"github.com/dimag-jfrog/migrate/driver/mongodb/gomethods"
-	pipep "github.com/dimag-jfrog/migrate/pipe"
+	"github.com/JFrogDev/go-dbmigrate/driver"
+	"github.com/JFrogDev/go-dbmigrate/driver/mongodb"
+	"github.com/JFrogDev/go-dbmigrate/driver/mongodb/gomethods"
+	pipep "github.com/JFrogDev/go-dbmigrate/pipe"
 	"os"
 	"reflect"
 	"time"

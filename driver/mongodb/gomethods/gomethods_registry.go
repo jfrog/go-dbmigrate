@@ -2,7 +2,7 @@ package gomethods
 
 import (
 	"fmt"
-	"github.com/dimag-jfrog/migrate/driver"
+	"github.com/JFrogDev/go-dbmigrate/driver"
 	"sync"
 )
 

@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dimag-jfrog/migrate/file"
-	"github.com/dimag-jfrog/migrate/migrate/direction"
-	pipep "github.com/dimag-jfrog/migrate/pipe"
+	"github.com/JFrogDev/go-dbmigrate/file"
+	"github.com/JFrogDev/go-dbmigrate/migrate/direction"
+	pipep "github.com/JFrogDev/go-dbmigrate/pipe"
 )
 
 // TestMigrate runs some additional tests on Migrate().

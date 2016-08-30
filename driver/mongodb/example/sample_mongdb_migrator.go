@@ -1,13 +1,13 @@
 package example
 
 import (
-	"github.com/dimag-jfrog/migrate/driver/mongodb/gomethods"
-	_ "github.com/dimag-jfrog/migrate/driver/mongodb/gomethods"
+	"github.com/JFrogDev/go-dbmigrate/driver/mongodb/gomethods"
+	_ "github.com/JFrogDev/go-dbmigrate/driver/mongodb/gomethods"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
 
-	"github.com/dimag-jfrog/migrate/driver/mongodb"
+	"github.com/JFrogDev/go-dbmigrate/driver/mongodb"
 )
 
 type SampleMongoDbMigrator struct {

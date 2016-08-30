@@ -6,8 +6,8 @@ import (
 	"testing"
 	// Ensure imports for each driver we wish to test
 
-	_ "github.com/dimag-jfrog/migrate/driver/postgres"
-	_ "github.com/dimag-jfrog/migrate/driver/sqlite3"
+	_ "github.com/JFrogDev/go-dbmigrate/driver/postgres"
+	_ "github.com/JFrogDev/go-dbmigrate/driver/sqlite3"
 )
 
 // Add Driver URLs here to test basic Up, Down, .. functions.

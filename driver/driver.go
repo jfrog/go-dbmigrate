@@ -5,7 +5,7 @@ import (
 	"fmt"
 	neturl "net/url" // alias to allow `url string` func signature in New
 
-	"github.com/dimag-jfrog/migrate/file"
+	"github.com/JFrogDev/go-dbmigrate/file"
 )
 
 // Driver is the interface type that needs to implemented by all drivers.
