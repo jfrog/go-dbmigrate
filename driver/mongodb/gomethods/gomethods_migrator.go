@@ -32,7 +32,7 @@ type MethodInvocationFailedError struct {
 }
 
 func (e *MethodInvocationFailedError) Error() string {
-	return fmt.Sprintf("Method %s returned an error: %v", e.MethodName, e.Error)
+	return fmt.Sprintf("Method %s returned an error: %v", e.MethodName, e.Err)
 }
 
 type MigrationMethodInvoker interface {
