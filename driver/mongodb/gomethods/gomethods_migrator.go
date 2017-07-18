@@ -62,7 +62,7 @@ func (m *Migrator) Migrate(f file.File, pipe chan interface{}) error {
 
 	for i, methodName := range methods {
 		pipe <- methodName
-		err := m.MethodInvoker.Invoke(methodName)
+		err := m.invokeMethodWithRecoverFromPanic(methodName)
 		if err != nil {
 			pipe <- err
 			if !m.RollbackOnFailure {
@@ -80,7 +80,7 @@ func (m *Migrator) Migrate(f file.File, pipe chan interface{}) error {
 				}
 
 				pipe <- rollbackToMethodName
-				err = m.MethodInvoker.Invoke(rollbackToMethodName)
+				err = m.invokeMethodWithRecoverFromPanic(rollbackToMethodName)
 				if err != nil {
 					pipe <- err
 					break
@@ -91,6 +91,19 @@ func (m *Migrator) Migrate(f file.File, pipe chan interface{}) error {
 	}
 
 	return nil
+}
+
+func (m *Migrator) invokeMethodWithRecoverFromPanic(methodName string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = &MethodInvocationFailedError{
+				MethodName: methodName,
+				Err:        fmt.Errorf("recover from panic: %v", r),
+			}
+		}
+	}()
+
+	return m.MethodInvoker.Invoke(methodName)
 }
 
 func getRollbackToMethod(methodName string) string {

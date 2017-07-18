@@ -1,6 +1,7 @@
 package gomethods
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -30,6 +31,9 @@ func (invoker *FakeGoMethodsInvoker) Invoke(methodName string) error {
 			MethodName: methodName,
 			Err:        SomeError{},
 		}
+	}
+	if methodName == "V001_some_failing_with_panic_method_up" || methodName == "V001_some_failing_with_panic_method_down" {
+		panic("Some dramatically unexpected error happened!!")
 	}
 	return nil
 }
@@ -139,6 +143,52 @@ func TestMigrate(t *testing.T) {
 			expectedErrors: []error{&MethodInvocationFailedError{
 				MethodName: "V001_some_failing_method_down",
 				Err:        SomeError{},
+			}},
+		},
+		{
+			name: "up migration: failing with panic method stops execution with an error",
+			file: file.File{
+				Path:      "/foobar",
+				FileName:  "001_foobar.up.gm",
+				Version:   1,
+				Name:      "foobar",
+				Direction: direction.Up,
+				Content: []byte(`
+						V001_init_organizations_up
+						V001_some_failing_with_panic_method_up
+						V001_init_users_up
+					`),
+			},
+			expectedInvokedMethods: []string{
+				"V001_init_organizations_up",
+				"V001_some_failing_with_panic_method_up",
+			},
+			expectedErrors: []error{&MethodInvocationFailedError{
+				MethodName: "V001_some_failing_with_panic_method_up",
+				Err:        errors.New("recover from panic: Some dramatically unexpected error happened!!"),
+			}},
+		},
+		{
+			name: "down migration: failing with panic method stops migration with an error",
+			file: file.File{
+				Path:      "/foobar",
+				FileName:  "001_foobar.down.gm",
+				Version:   1,
+				Name:      "foobar",
+				Direction: direction.Down,
+				Content: []byte(`
+						V001_init_users_down
+						V001_some_failing_with_panic_method_down
+						V001_init_organizations_down
+					`),
+			},
+			expectedInvokedMethods: []string{
+				"V001_init_users_down",
+				"V001_some_failing_with_panic_method_down",
+			},
+			expectedErrors: []error{&MethodInvocationFailedError{
+				MethodName: "V001_some_failing_with_panic_method_down",
+				Err:        errors.New("recover from panic: Some dramatically unexpected error happened!!"),
 			}},
 		},
 		{
