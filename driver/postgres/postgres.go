@@ -7,14 +7,15 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/lib/pq"
 	"github.com/JFrogDev/go-dbmigrate/driver"
 	"github.com/JFrogDev/go-dbmigrate/file"
 	"github.com/JFrogDev/go-dbmigrate/migrate/direction"
+	"github.com/lib/pq"
 )
 
 type Driver struct {
-	db *sql.DB
+	db  *sql.DB
+	url string
 }
 
 const tableName = "schema_migrations"
@@ -28,10 +29,31 @@ func (driver *Driver) Initialize(url string) error {
 		return err
 	}
 	driver.db = db
+	driver.url = url
 
 	if err := driver.ensureVersionTableExists(); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (driver *Driver) ensureConnectionNotClosed() error {
+	pingErr := driver.db.Ping()
+	if pingErr == nil {
+		return nil
+	}
+	if pingErr.Error() != "sql: database is closed" {
+		return pingErr
+	}
+
+	db, err := sql.Open("postgres", driver.url)
+	if err != nil {
+		return err
+	}
+	if err := db.Ping(); err != nil {
+		return err
+	}
+	driver.db = db
 	return nil
 }
 
@@ -57,6 +79,10 @@ func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 	defer close(pipe)
 	pipe <- f
 
+	if err := driver.ensureConnectionNotClosed(); err != nil {
+		pipe <- fmt.Errorf("failed to ensure db connection is open: %v", err)
+		return
+	}
 	tx, err := driver.db.Begin()
 	if err != nil {
 		pipe <- err
@@ -110,6 +136,10 @@ func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 }
 
 func (driver *Driver) Version() (uint64, error) {
+	if err := driver.ensureConnectionNotClosed(); err != nil {
+		return 0, fmt.Errorf("failed to ensure db connection is open: %v", err)
+	}
+
 	var version uint64
 	err := driver.db.QueryRow("SELECT version FROM " + tableName + " ORDER BY version DESC LIMIT 1").Scan(&version)
 	switch {

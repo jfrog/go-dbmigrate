@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"errors"
+	"fmt"
 	"github.com/JFrogDev/go-dbmigrate/driver"
 	"github.com/JFrogDev/go-dbmigrate/driver/mongodb/gomethods"
 	"github.com/JFrogDev/go-dbmigrate/file"
@@ -32,6 +33,7 @@ type Driver struct {
 
 	methodsReceiver MethodsReceiver
 	migrator        gomethods.Migrator
+	url             string
 }
 
 var _ gomethods.GoMethodsDriver = (*Driver)(nil)
@@ -73,16 +75,54 @@ func (driver *Driver) Initialize(url string) error {
 		return errors.New("invalid mongodb:// scheme")
 	}
 
-	session, err := mgo.Dial(url)
+	driver.url = url
+	if err := driver.reconnectToMasterSession(); err != nil {
+		return fmt.Errorf("failed to connect to session: %v", err)
+	}
+	driver.migrator = gomethods.Migrator{MethodInvoker: driver}
+
+	return nil
+}
+
+func (driver *Driver) reconnectToMasterSession() error {
+	session, err := mgo.Dial(driver.url)
 	if err != nil {
 		return err
 	}
 	session.SetMode(mgo.Monotonic, true)
-
+	if driver.Session != nil {
+		driver.Session.Close()
+	}
 	driver.Session = session
-	driver.migrator = gomethods.Migrator{MethodInvoker: driver}
-
 	return nil
+}
+
+func (driver *Driver) ensureSessionNotClosed() (retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if err := driver.reconnectToMasterSession(); err != nil {
+				retErr = fmt.Errorf("recovering from error: '%v'. failed to re-connect to master session: %v", r, err)
+				return
+			}
+		}
+	}()
+
+	//Ping panics if session is closed
+	if pingErr := driver.Session.Ping(); pingErr != nil {
+		if reconnectErr := driver.reconnectToMasterSession(); reconnectErr != nil {
+			retErr = fmt.Errorf("Session ping has failed: %v. Failed to re-connect to master session: %v", pingErr, reconnectErr)
+			return
+		}
+	}
+	return nil
+}
+
+func (driver *Driver) getNewSession() (*mgo.Session, error) {
+	if err := driver.ensureSessionNotClosed(); err != nil {
+		return nil, fmt.Errorf("failed to ensure master session is not closed: %v", err)
+	}
+	session := driver.Session.Clone()
+	return session, nil
 }
 
 func (driver *Driver) Close() error {
@@ -98,10 +138,15 @@ func (driver *Driver) FilenameExtension() string {
 
 func (driver *Driver) Version() (uint64, error) {
 	var latestMigration DbMigration
-	c := driver.Session.DB(driver.methodsReceiver.DbName()).C(MIGRATE_C)
 
-	err := c.Find(bson.M{}).Sort("-version").One(&latestMigration)
+	session, err := driver.getNewSession()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get new session: %v", err)
+	}
+	defer session.Close()
+	c := session.DB(driver.methodsReceiver.DbName()).C(MIGRATE_C)
 
+	err = c.Find(bson.M{}).Sort("-version").One(&latestMigration)
 	switch {
 	case err == mgo.ErrNotFound:
 		return 0, nil
@@ -120,7 +165,13 @@ func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 		return
 	}
 
-	migrate_c := driver.Session.DB(driver.methodsReceiver.DbName()).C(MIGRATE_C)
+	session, err := driver.getNewSession()
+	if err != nil {
+		pipe <- fmt.Errorf("Migrate failed to get new session: %v", err)
+		return
+	}
+	defer session.Close()
+	migrate_c := session.DB(driver.methodsReceiver.DbName()).C(MIGRATE_C)
 
 	if f.Direction == direction.Up {
 		id := bson.NewObjectId()
@@ -167,7 +218,12 @@ func (driver *Driver) Invoke(methodName string) error {
 		return gomethods.MissingMethodError(methodName)
 	}
 
-	retValues := migrateMethod.Call([]reflect.Value{reflect.ValueOf(driver.Session)})
+	session, err := driver.getNewSession()
+	if err != nil {
+		return fmt.Errorf("Migrate failed to get new session: %v", err)
+	}
+	defer session.Close()
+	retValues := migrateMethod.Call([]reflect.Value{reflect.ValueOf(session)})
 	if len(retValues) != 1 {
 		return gomethods.WrongMethodSignatureError(name)
 	}
