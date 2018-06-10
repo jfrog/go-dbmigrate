@@ -2,7 +2,7 @@ package gomethods
 
 import (
 	"fmt"
-	"github.com/JFrogDev/go-dbmigrate/driver"
+	"github.com/jfrog/go-dbmigrate/driver"
 	"sync"
 )
 

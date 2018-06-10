@@ -10,7 +10,7 @@
 ## Usage in Go
 
 ```go
-import "github.com/JFrogDev/go-dbmigrate/migrate"
+import "github.com/jfrog/go-dbmigrate/migrate"
 
 // Import your migration methods package so that they are registered and available for the MongoDB driver.
 // There is no need to import the MongoDB driver explicitly, as it should already be imported by your migration methods package.
@@ -59,14 +59,14 @@ V001_some_migration_operation_down
 
 ## Methods registration
 
-For a detailed example see: [sample_mongodb_migrator.go](https://github.com/JFrogDev/go-dbmigrate/blob/master/driver/mongodb/example/sample_mongdb_migrator.go)
+For a detailed example see: [sample_mongodb_migrator.go](https://github.com/jfrog/go-dbmigrate/blob/master/driver/mongodb/example/sample_mongdb_migrator.go)
 
 ```go
 package my_mongo_db_migrator
 
 import (
-  "github.com/JFrogDev/go-dbmigrate/driver/mongodb"
-  "github.com/JFrogDev/go-dbmigrate/driver/mongodb/gomethods"
+  "github.com/jfrog/go-dbmigrate/driver/mongodb"
+  "github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
   "gopkg.in/mgo.v2"
 )
 

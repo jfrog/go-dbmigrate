@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/JFrogDev/go-dbmigrate/migrate/direction"
+	"github.com/jfrog/go-dbmigrate/migrate/direction"
 	"go/token"
 	"io/ioutil"
 	"path"
