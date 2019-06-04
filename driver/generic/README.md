@@ -2,8 +2,8 @@
 
 * Runs pre-registered Golang methods that receive no parameters and return `error` on failure.
 * Stores migration version details in auto-generated table ``db_migrations`` of database that user should provide in driver initialization url.
-  The url should be same as the database connection string, but the schema will be `gomethods`. 
-  and the real schema (database type) (database type) should be provided in `migrations_db_type` query parameter (see example below)
+  The url should be same as the database connection string, but the schema will be `generic`. 
+  and the real schema (database type) should be provided in `migrations_db_type` query parameter (see example below)
   This parameter will be stripped of before the driver will attempt to connect to the database.
   Currently only `postgres` schema is supported.  
   
