@@ -8,8 +8,8 @@ import (
 	"github.com/jfrog/go-dbmigrate/file"
 	"github.com/jfrog/go-dbmigrate/migrate/direction"
 
-	"github.com/jfrog/go-dbmigrate/driver/gomethods"
-	m "github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
+	"github.com/jfrog/go-dbmigrate/driver/generic"
+	"github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
 	pipep "github.com/jfrog/go-dbmigrate/pipe"
 	_ "github.com/lib/pq"
 	"os"
@@ -27,7 +27,7 @@ type ExpectedMigrationResult struct {
 func RunMigrationAndAssertResult(
 	t *testing.T,
 	title string,
-	d *gomethods.Driver,
+	d *generic.Driver,
 	file file.File,
 	expected *ExpectedMigrationResult) {
 
@@ -90,7 +90,7 @@ func TestMigrate(t *testing.T) {
 	host := os.Getenv("POSTGRES_PORT_5432_TCP_ADDR")
 	port := os.Getenv("POSTGRES_PORT_5432_TCP_PORT")
 	migrationsDbUrl := "postgres://postgres@" + host + ":" + port + "/template1?sslmode=disable"
-	driverUrl := "gomethods://postgres@" + host + ":" + port + "/template1?sslmode=disable&migrations_db_type=postgres"
+	driverUrl := "generic://postgres@" + host + ":" + port + "/template1?sslmode=disable&migrations_db_type=postgres"
 
 	// prepare clean database
 	connection, err := sql.Open("postgres", migrationsDbUrl)
@@ -111,8 +111,8 @@ func TestMigrate(t *testing.T) {
 	session.DB(DB_NAME).C(ORGANIZATIONS_C).DropCollection()
 	session.DB(DB_NAME).C(USERS_C).DropCollection()
 
-	d0 := driver.GetDriver("gomethods")
-	d, ok := d0.(*gomethods.Driver)
+	d0 := driver.GetDriver("generic")
+	d, ok := d0.(*generic.Driver)
 	if !ok {
 		t.Fatal("MongoDbGoMethodsDriver has not registered")
 	}
@@ -251,7 +251,7 @@ func TestMigrate(t *testing.T) {
 				Organizations:    []Organization{},
 				Organizations_v2: []Organization_v2{},
 				Users:            []User{},
-				Errors:           []error{m.MissingMethodError("v001_non_existing_method_up")},
+				Errors:           []error{gomethods.MissingMethodError("v001_non_existing_method_up")},
 			},
 		},
 		{
@@ -273,7 +273,7 @@ func TestMigrate(t *testing.T) {
 				Organizations_v2: []Organization_v2{},
 				Users:            []User{},
 				//Errors:           []error{m.MethodNotExportedError("v001_not_exported_method_up")},
-				Errors: []error{m.MissingMethodError("v001_not_exported_method_up")},
+				Errors: []error{gomethods.MissingMethodError("v001_not_exported_method_up")},
 			},
 		},
 		{
@@ -294,7 +294,7 @@ func TestMigrate(t *testing.T) {
 				Organizations:    []Organization{},
 				Organizations_v2: []Organization_v2{},
 				Users:            []User{},
-				Errors:           []error{m.WrongMethodSignatureError("V001_method_with_wrong_signature_up")},
+				Errors:           []error{gomethods.WrongMethodSignatureError("V001_method_with_wrong_signature_up")},
 			},
 		},
 		{
@@ -315,7 +315,7 @@ func TestMigrate(t *testing.T) {
 				Organizations:    []Organization{},
 				Organizations_v2: []Organization_v2{},
 				Users:            []User{},
-				Errors:           []error{m.WrongMethodSignatureError("V001_method_with_wrong_signature_down")},
+				Errors:           []error{gomethods.WrongMethodSignatureError("V001_method_with_wrong_signature_down")},
 			},
 		},
 	}

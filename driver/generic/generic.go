@@ -1,4 +1,4 @@
-package gomethods
+package generic
 
 import (
 	"database/sql"
@@ -26,7 +26,7 @@ func (e WrongMethodsReceiverTypeError) Error() string {
 }
 
 const tableName = "db_migrations"
-const DRIVER_NAME = "gomethods"
+const DRIVER_NAME = "generic"
 
 type Driver struct {
 	db              *sql.DB
@@ -50,7 +50,7 @@ func (d *Driver) SetMethodsReceiver(r interface{}) error {
 }
 
 func init() {
-	driver.RegisterDriver("gomethods", &Driver{})
+	driver.RegisterDriver("generic", &Driver{})
 }
 
 func (driver *Driver) Initialize(url string) error {

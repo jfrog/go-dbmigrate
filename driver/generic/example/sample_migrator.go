@@ -2,7 +2,7 @@ package example
 
 import (
 	"fmt"
-	_ "github.com/jfrog/go-dbmigrate/driver/gomethods"
+	_ "github.com/jfrog/go-dbmigrate/driver/generic"
 	"github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -14,7 +14,7 @@ type SampleMongoDbGoMethodsMigrator struct {
 }
 
 func init() {
-	gomethods.RegisterMethodsReceiverForDriver("gomethods", &SampleMongoDbGoMethodsMigrator{})
+	gomethods.RegisterMethodsReceiverForDriver("generic", &SampleMongoDbGoMethodsMigrator{})
 }
 
 // Here goes the specific mongodb golang methods migration logic

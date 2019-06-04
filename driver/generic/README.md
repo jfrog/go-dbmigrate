@@ -18,7 +18,7 @@ import "github.com/jfrog/go-dbmigrate/migrate"
 import _ "my_go_methods_migrator"
 
 // use synchronous versions of migration functions ...
-allErrors, ok := migrate.UpSync("gomethods://user@host:port/database?migrations_db_type=postgres", "./path")
+allErrors, ok := migrate.UpSync("generic://user@host:port/database?migrations_db_type=postgres", "./path")
 if !ok {
   fmt.Println("Oh no ...")
   // do sth with allErrors slice
@@ -26,7 +26,7 @@ if !ok {
 
 // use the asynchronous version of migration functions ...
 pipe := migrate.NewPipe()
-go migrate.Up(pipe, "gomethods://user@host:port/database?migrations_db_type=postgres", "./path")
+go migrate.Up(pipe, "generic://user@host:port/database?migrations_db_type=postgres", "./path")
 // pipe is basically just a channel
 // write your own channel listener. see writePipe() in main.go as an example.
 ```
@@ -59,13 +59,13 @@ V001_some_migration_operation_down
 
 ## Methods registration
 
-For a detailed example see: [sample_migrator.go](https://github.com/jfrog/go-dbmigrate/blob/gomethods/driver/gomethods/example/sample_migrator.go)
+For a detailed example see: [sample_migrator.go](https://github.com/jfrog/go-dbmigrate/blob/gomethods/driver/generic/example/sample_migrator.go)
 
 ```go
 package my_go_methods_migrator
 
 import (
-  _ "github.com/jfrog/go-dbmigrate/driver/gomethods"
+  _ "github.com/jfrog/go-dbmigrate/driver/generic"
   "github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
 )
 
@@ -74,7 +74,7 @@ type MyGoMethodsMigrator struct {
 }
 
 func init() {
-	gomethods.RegisterMethodsReceiverForDriver("gomethods", &MyGoMethodsMigrator{})
+	gomethods.RegisterMethodsReceiverForDriver("generic", &MyGoMethodsMigrator{})
 }
 
 
