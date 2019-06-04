@@ -1,8 +1,11 @@
-# GoMethods Driver
+# Generic Go Methods Driver
 
 * Runs pre-registered Golang methods that receive no parameters and return `error` on failure.
-* Stores migration version details in table ``db_migrations`` of postgres database that user should provide in driver initialization.
-  The ``db_migrations`` table will be auto-generated.
+* Stores migration version details in auto-generated table ``db_migrations`` of database that user should provide in driver initialization url.
+  The url should be same as the database connection string, but the schema will be `gomethods`. 
+  and the real schema (database type) (database type) should be provided in `migrations_db_type` query parameter (see example below)
+  This parameter will be stripped of before the driver will attempt to connect to the database.
+  Currently only `postgres` schema is supported.  
   
 
 ## Usage in Go
@@ -15,7 +18,7 @@ import "github.com/jfrog/go-dbmigrate/migrate"
 import _ "my_go_methods_migrator"
 
 // use synchronous versions of migration functions ...
-allErrors, ok := migrate.UpSync("postgres://user@host:port/database", "./path")
+allErrors, ok := migrate.UpSync("gomethods://user@host:port/database?migrations_db_type=postgres", "./path")
 if !ok {
   fmt.Println("Oh no ...")
   // do sth with allErrors slice
@@ -23,7 +26,7 @@ if !ok {
 
 // use the asynchronous version of migration functions ...
 pipe := migrate.NewPipe()
-go migrate.Up(pipe, "postgres://user@host:port/database", "./path")
+go migrate.Up(pipe, "gomethods://user@host:port/database?migrations_db_type=postgres", "./path")
 // pipe is basically just a channel
 // write your own channel listener. see writePipe() in main.go as an example.
 ```
@@ -40,14 +43,14 @@ Recommended (but not required) naming conventions for migration methods:
 * Prefix with V<version> : for example V001 for version 1. 
 * Suffix with "_up" or "_down" for up and down migrations correspondingly.
 
-001_first_release.up.mgo
+001_first_release.up.gom
 ```
 V001_some_migration_operation_up
 V001_some_other_operation_up
 ...
 ```
 
-001_first_release.down.mgo
+001_first_release.down.gom
 ```
 V001_some_other_operation_down
 V001_some_migration_operation_down

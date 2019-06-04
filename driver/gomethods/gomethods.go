@@ -2,11 +2,14 @@ package gomethods
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/jfrog/go-dbmigrate/driver"
 	"github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
 	"github.com/jfrog/go-dbmigrate/file"
 	"github.com/jfrog/go-dbmigrate/migrate/direction"
+	_ "github.com/lib/pq"
+	neturl "net/url" // alias to allow `url string` func signature in New
 	"reflect"
 )
 
@@ -54,7 +57,29 @@ func (driver *Driver) Initialize(url string) error {
 	if driver.methodsReceiver == nil {
 		return UnregisteredMethodsReceiverError(DRIVER_NAME)
 	}
-	db, err := sql.Open("postgres", url)
+	urlObj, err := neturl.Parse(url)
+	if err != nil {
+		return fmt.Errorf("Failed to parse initialization url %s: %v", url, err)
+	}
+	queryValues := urlObj.Query()
+	migrationsDb := queryValues.Get("migrations_db_type")
+	var schema, driverName string
+	switch migrationsDb {
+	case "":
+		return errors.New("db_migrations_database query parameter was not provider")
+	case "postgres":
+		schema = "postgres"
+		driverName = "postgres"
+	}
+	if schema == "" {
+		return fmt.Errorf("Could not deduce db migration database schema from url %s", url)
+	}
+	queryValues.Del("migrations_db_type")
+	urlObj.RawQuery = queryValues.Encode()
+	urlObj.Scheme = schema
+
+	newUrl := urlObj.String()
+	db, err := sql.Open(driverName, newUrl)
 	if err != nil {
 		return err
 	}
@@ -62,7 +87,7 @@ func (driver *Driver) Initialize(url string) error {
 		return err
 	}
 	driver.db = db
-	driver.url = url
+	driver.url = newUrl
 
 	if err := driver.ensureVersionTableExists(); err != nil {
 		return err

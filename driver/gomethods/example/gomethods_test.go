@@ -89,10 +89,11 @@ func TestMigrate(t *testing.T) {
 
 	host := os.Getenv("POSTGRES_PORT_5432_TCP_ADDR")
 	port := os.Getenv("POSTGRES_PORT_5432_TCP_PORT")
-	driverUrl := "postgres://postgres@" + host + ":" + port + "/template1?sslmode=disable"
+	migrationsDbUrl := "postgres://postgres@" + host + ":" + port + "/template1?sslmode=disable"
+	driverUrl := "gomethods://postgres@" + host + ":" + port + "/template1?sslmode=disable&migrations_db_type=postgres"
 
 	// prepare clean database
-	connection, err := sql.Open("postgres", driverUrl)
+	connection, err := sql.Open("postgres", migrationsDbUrl)
 	if err != nil {
 		t.Fatal(err)
 	}
