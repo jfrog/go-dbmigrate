@@ -56,7 +56,7 @@ V001_some_migration_operation_down
 
 ## Methods registration
 
-For a detailed example see: [sample_migrator.go](https://github.com/jfrog/go-dbmigrate/blob/master/driver/gomethods/example/sample_migrator.go)
+For a detailed example see: [sample_migrator.go](https://github.com/jfrog/go-dbmigrate/blob/gomethods/driver/gomethods/example/sample_migrator.go)
 
 ```go
 package my_go_methods_migrator

@@ -2,8 +2,8 @@ package example
 
 import (
 	"fmt"
+	_ "github.com/jfrog/go-dbmigrate/driver/gomethods"
 	"github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
-	_ "github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"os"
