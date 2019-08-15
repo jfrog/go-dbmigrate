@@ -20,8 +20,8 @@ type Driver struct {
 
 const tableName = "schema_migrations"
 
-func (driver *Driver) Initialize(url string) error {
-	db, err := sql.Open("postgres", url)
+func (driver *Driver) Initialize(params driver.InitializeParams) error {
+	db, err := sql.Open("postgres", params.Url)
 	if err != nil {
 		return err
 	}
@@ -29,7 +29,7 @@ func (driver *Driver) Initialize(url string) error {
 		return err
 	}
 	driver.db = db
-	driver.url = url
+	driver.url = params.Url
 
 	if err := driver.ensureVersionTableExists(); err != nil {
 		return err

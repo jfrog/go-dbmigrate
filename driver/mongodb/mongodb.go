@@ -1,6 +1,8 @@
 package mongodb
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"github.com/jfrog/go-dbmigrate/driver"
@@ -9,6 +11,9 @@ import (
 	"github.com/jfrog/go-dbmigrate/migrate/direction"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"io/ioutil"
+	"net"
+	"os"
 	"reflect"
 	"strings"
 )
@@ -33,7 +38,7 @@ type Driver struct {
 
 	methodsReceiver MethodsReceiver
 	migrator        gomethods.Migrator
-	url             string
+	params          driver.InitializeParams
 }
 
 var _ gomethods.GoMethodsDriver = (*Driver)(nil)
@@ -65,27 +70,30 @@ type DbMigration struct {
 	Version uint64        `bson:"version"`
 }
 
-func (driver *Driver) Initialize(url string) error {
+func (driver *Driver) Initialize(params driver.InitializeParams) error {
 	if driver.methodsReceiver == nil {
 		return UnregisteredMethodsReceiverError(DRIVER_NAME)
 	}
-
-	urlWithoutScheme := strings.SplitN(url, "mongodb://", 2)
+	urlWithoutScheme := strings.SplitN(params.Url, "mongodb://", 2)
 	if len(urlWithoutScheme) != 2 {
 		return errors.New("invalid mongodb:// scheme")
 	}
-
-	driver.url = url
+	driver.params = params
 	if err := driver.reconnectToMasterSession(); err != nil {
 		return fmt.Errorf("failed to connect to session: %v", err)
 	}
 	driver.migrator = gomethods.Migrator{MethodInvoker: driver}
-
 	return nil
 }
 
 func (driver *Driver) reconnectToMasterSession() error {
-	session, err := mgo.Dial(driver.url)
+	var err error
+	var session *mgo.Session
+	if driver.params.SSlParams.SSlMode {
+		session, err = driver.reconnectToMasterSessionSSlMode()
+	} else {
+		session, err = mgo.Dial(driver.params.Url)
+	}
 	if err != nil {
 		return err
 	}
@@ -95,6 +103,53 @@ func (driver *Driver) reconnectToMasterSession() error {
 	}
 	driver.Session = session
 	return nil
+}
+
+func (driver *Driver) reconnectToMasterSessionSSlMode() (*mgo.Session, error) {
+	clientCerts := []tls.Certificate{}
+	if cert, err := tls.LoadX509KeyPair(driver.params.SSlParams.ClientCertPath, driver.params.SSlParams.ClientKeyPath); err == nil {
+		clientCerts = append(clientCerts, cert)
+	}
+	var roots *x509.CertPool
+	ca, err := readFileFromPath(driver.params.SSlParams.CaFilePath)
+	if err == nil {
+		roots = x509.NewCertPool()
+		ok := roots.AppendCertsFromPEM([]byte(ca))
+		if !ok {
+			return nil, errors.New("failed to parse root certificate")
+		}
+	}
+	dialInfo, err := mgo.ParseURL(driver.params.Url)
+	if err != nil {
+		errMsg := fmt.Sprintf("Failed to parse mongo connection string: %v", err)
+		return nil, errors.New(errMsg)
+	}
+	tlsConfig := &tls.Config{
+		RootCAs:      roots,
+		Certificates: clientCerts,
+	}
+	dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
+		conn, err := tls.Dial("tcp", addr.String(), tlsConfig)
+		if err != nil {
+			return nil, err
+		}
+		return conn, nil
+	}
+	session, err := mgo.DialWithInfo(dialInfo)
+	return session, err
+}
+
+func readFileFromPath(path string) (string, error) {
+	f, err := os.Open(path)
+	defer f.Close()
+	if err != nil {
+		return "", err
+	}
+	data, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+	return string(data), err
 }
 
 func (driver *Driver) ensureSessionNotClosed() (retErr error) {
