@@ -3,8 +3,8 @@ package gomethods
 import (
 	"bufio"
 	"fmt"
-	"github.com/JFrogDev/go-dbmigrate/driver"
-	"github.com/JFrogDev/go-dbmigrate/file"
+	"github.com/jfrog/go-dbmigrate/driver"
+	"github.com/jfrog/go-dbmigrate/file"
 	"os"
 	"path"
 	"strings"

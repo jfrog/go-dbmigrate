@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/JFrogDev/go-dbmigrate/file"
-	"github.com/JFrogDev/go-dbmigrate/migrate/direction"
+	"github.com/jfrog/go-dbmigrate/file"
+	"github.com/jfrog/go-dbmigrate/migrate/direction"
 
-	pipep "github.com/JFrogDev/go-dbmigrate/pipe"
+	pipep "github.com/jfrog/go-dbmigrate/pipe"
 )
 
 type FakeGoMethodsInvoker struct {

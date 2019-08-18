@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/JFrogDev/go-dbmigrate/driver"
-	"github.com/JFrogDev/go-dbmigrate/file"
-	"github.com/JFrogDev/go-dbmigrate/migrate/direction"
+	"github.com/jfrog/go-dbmigrate/driver"
+	"github.com/jfrog/go-dbmigrate/file"
+	"github.com/jfrog/go-dbmigrate/migrate/direction"
 )
 
 type Driver struct {

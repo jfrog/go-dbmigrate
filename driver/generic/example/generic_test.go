@@ -1,15 +1,17 @@
 package example
 
 import (
+	"database/sql"
+	"github.com/jfrog/go-dbmigrate/driver"
 	"testing"
 
 	"github.com/jfrog/go-dbmigrate/file"
 	"github.com/jfrog/go-dbmigrate/migrate/direction"
 
-	"github.com/jfrog/go-dbmigrate/driver"
-	"github.com/jfrog/go-dbmigrate/driver/mongodb"
+	"github.com/jfrog/go-dbmigrate/driver/generic"
 	"github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
 	pipep "github.com/jfrog/go-dbmigrate/pipe"
+	_ "github.com/lib/pq"
 	"os"
 	"reflect"
 	"time"
@@ -25,7 +27,7 @@ type ExpectedMigrationResult struct {
 func RunMigrationAndAssertResult(
 	t *testing.T,
 	title string,
-	d *mongodb.Driver,
+	d *generic.Driver,
 	file file.File,
 	expected *ExpectedMigrationResult) {
 
@@ -40,7 +42,11 @@ func RunMigrationAndAssertResult(
 	go d.Migrate(file, pipe)
 	errs = pipep.ReadErrors(pipe)
 
-	session := d.Session
+	session, err := getMongoSession()
+	if err != nil {
+		t.Fatal("Failed to open mongo session: $v", err)
+	}
+	defer session.Close()
 	if len(expected.Organizations) > 0 {
 		err = session.DB(DB_NAME).C(ORGANIZATIONS_C).Find(nil).All(&actualOrganizations)
 	} else {
@@ -81,25 +87,38 @@ func TestMigrate(t *testing.T) {
 		}
 	}()
 
-	host := os.Getenv("MONGO_PORT_27017_TCP_ADDR")
-	port := os.Getenv("MONGO_PORT_27017_TCP_PORT")
+	host := os.Getenv("POSTGRES_PORT_5432_TCP_ADDR")
+	port := os.Getenv("POSTGRES_PORT_5432_TCP_PORT")
+	migrationsDbUrl := "postgres://postgres@" + host + ":" + port + "/template1?sslmode=disable"
+	driverUrl := "generic://postgres@" + host + ":" + port + "/template1?sslmode=disable&migrations_db_type=postgres"
 
-	driverUrl := "mongodb://" + host + ":" + port
-
-	d0 := driver.GetDriver("mongodb")
-	d, ok := d0.(*mongodb.Driver)
-	if !ok {
-		t.Fatal("MongoDbGoMethodsDriver has not registered")
-	}
-
-	if err := d.Initialize(driverUrl); err != nil {
+	// prepare clean database
+	connection, err := sql.Open("postgres", migrationsDbUrl)
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Reset DB
-	d.Session.DB(DB_NAME).C(mongodb.MIGRATE_C).DropCollection()
-	d.Session.DB(DB_NAME).C(ORGANIZATIONS_C).DropCollection()
-	d.Session.DB(DB_NAME).C(USERS_C).DropCollection()
+	if _, err := connection.Exec(`
+				DROP TABLE IF EXISTS db_migrations;`); err != nil {
+		t.Fatal(err)
+	}
+	session, err := getMongoSession()
+	if err != nil {
+		t.Fatalf("could not get mongo session: %v", err)
+	}
+	defer session.Close()
+	session.DB(DB_NAME).C(ORGANIZATIONS_C).DropCollection()
+	session.DB(DB_NAME).C(USERS_C).DropCollection()
+
+	d0 := driver.GetDriver("generic")
+	d, ok := d0.(*generic.Driver)
+	if !ok {
+		t.Fatal("MongoDbGoMethodsDriver has not registered")
+	}
+	if err := d.Initialize(driverUrl); err != nil {
+		t.Fatal(err)
+	}
 
 	date1, _ := time.Parse(SHORT_DATE_LAYOUT, "1994-Jul-05")
 	date2, _ := time.Parse(SHORT_DATE_LAYOUT, "1998-Sep-04")
@@ -253,7 +272,7 @@ func TestMigrate(t *testing.T) {
 				Organizations:    []Organization{},
 				Organizations_v2: []Organization_v2{},
 				Users:            []User{},
-				//Errors:           []error{gomethods.MethodNotExportedError("v001_not_exported_method_up")},
+				//Errors:           []error{m.MethodNotExportedError("v001_not_exported_method_up")},
 				Errors: []error{gomethods.MissingMethodError("v001_not_exported_method_up")},
 			},
 		},

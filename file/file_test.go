@@ -1,7 +1,7 @@
 package file
 
 import (
-	"github.com/JFrogDev/go-dbmigrate/migrate/direction"
+	"github.com/jfrog/go-dbmigrate/migrate/direction"
 	"io/ioutil"
 	"os"
 	"path"
