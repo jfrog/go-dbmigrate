@@ -34,11 +34,11 @@ const MIGRATE_C = "db_migrations"
 const DRIVER_NAME = "gomethods.mongodb"
 
 type Driver struct {
-	Session *mgo.Session
-
+	Session         *mgo.Session
 	methodsReceiver MethodsReceiver
 	migrator        gomethods.Migrator
-	params          driver.InitializeParams
+	Url             string
+	sslOptions      driver.MongoSSlOptions
 }
 
 var _ gomethods.GoMethodsDriver = (*Driver)(nil)
@@ -70,29 +70,37 @@ type DbMigration struct {
 	Version uint64        `bson:"version"`
 }
 
-func (driver *Driver) Initialize(params driver.InitializeParams) error {
-	if driver.methodsReceiver == nil {
+func (d *Driver) Initialize(url string, initOptions ...func(*driver.InitializeParams)) error {
+	if d.methodsReceiver == nil {
 		return UnregisteredMethodsReceiverError(DRIVER_NAME)
 	}
-	urlWithoutScheme := strings.SplitN(params.Url, "mongodb://", 2)
+	urlWithoutScheme := strings.SplitN(url, "mongodb://", 2)
 	if len(urlWithoutScheme) != 2 {
 		return errors.New("invalid mongodb:// scheme")
 	}
-	driver.params = params
-	if err := driver.reconnectToMasterSession(); err != nil {
+	d.Url = url
+	if len(initOptions) > 0 {
+		options := &driver.InitializeParams{}
+		for _, option := range initOptions {
+			option(options)
+		}
+		d.sslOptions = options.MongoSSlParams
+	}
+
+	if err := d.reconnectToMasterSession(); err != nil {
 		return fmt.Errorf("failed to connect to session: %v", err)
 	}
-	driver.migrator = gomethods.Migrator{MethodInvoker: driver}
+	d.migrator = gomethods.Migrator{MethodInvoker: d}
 	return nil
 }
 
 func (driver *Driver) reconnectToMasterSession() error {
 	var err error
 	var session *mgo.Session
-	if driver.params.SSlParams.SSlMode {
+	if driver.sslOptions.SSlMode {
 		session, err = driver.reconnectToMasterSessionSSlMode()
 	} else {
-		session, err = mgo.Dial(driver.params.Url)
+		session, err = mgo.Dial(driver.Url)
 	}
 	if err != nil {
 		return err
@@ -107,11 +115,11 @@ func (driver *Driver) reconnectToMasterSession() error {
 
 func (driver *Driver) reconnectToMasterSessionSSlMode() (*mgo.Session, error) {
 	clientCerts := []tls.Certificate{}
-	if cert, err := tls.LoadX509KeyPair(driver.params.SSlParams.ClientCertPath, driver.params.SSlParams.ClientKeyPath); err == nil {
+	if cert, err := tls.LoadX509KeyPair(driver.sslOptions.ClientCertPath, driver.sslOptions.ClientKeyPath); err == nil {
 		clientCerts = append(clientCerts, cert)
 	}
 	var roots *x509.CertPool
-	ca, err := readFileFromPath(driver.params.SSlParams.CaFilePath)
+	ca, err := readFileFromPath(driver.sslOptions.CaFilePath)
 	if err == nil {
 		roots = x509.NewCertPool()
 		ok := roots.AppendCertsFromPEM([]byte(ca))
@@ -119,7 +127,7 @@ func (driver *Driver) reconnectToMasterSessionSSlMode() (*mgo.Session, error) {
 			return nil, errors.New("failed to parse root certificate")
 		}
 	}
-	dialInfo, err := mgo.ParseURL(driver.params.Url)
+	dialInfo, err := mgo.ParseURL(driver.Url)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to parse mongo connection string: %v", err)
 		return nil, errors.New(errMsg)

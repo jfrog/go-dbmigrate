@@ -53,7 +53,7 @@ func init() {
 	driver.RegisterDriver("generic", &Driver{})
 }
 
-func (driver *Driver) Initialize(url string) error {
+func (driver *Driver) Initialize(url string, initOptions ...func(*driver.InitializeParams)) error {
 	if driver.methodsReceiver == nil {
 		return UnregisteredMethodsReceiverError(DRIVER_NAME)
 	}
