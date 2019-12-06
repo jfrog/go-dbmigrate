@@ -8,6 +8,10 @@ import (
 	"github.com/jfrog/go-dbmigrate/file"
 )
 
+var (
+	ErrLocked = fmt.Errorf("can't acquire lock")
+)
+
 // Driver is the interface type that needs to implemented by all drivers.
 type Driver interface {
 
