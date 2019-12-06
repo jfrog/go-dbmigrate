@@ -111,10 +111,14 @@ func TestMigrate(t *testing.T) {
 	session.DB(DB_NAME).C(ORGANIZATIONS_C).DropCollection()
 	session.DB(DB_NAME).C(USERS_C).DropCollection()
 
-	d0 := driver.GetDriver("generic")
+	gen, ok := driver.GetDriverGenerator("generic")
+	if !ok {
+		t.Fatal("Generic driver has not been registered")
+	}
+	d0 := gen.Generate()
 	d, ok := d0.(*generic.Driver)
 	if !ok {
-		t.Fatal("MongoDbGoMethodsDriver has not registered")
+		t.Fatal("MongoDbGoMethodsDriver has not been registered")
 	}
 	if err := d.Initialize(driverUrl); err != nil {
 		t.Fatal(err)

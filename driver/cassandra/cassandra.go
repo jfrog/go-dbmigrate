@@ -167,5 +167,6 @@ func (driver *Driver) Version() (uint64, error) {
 }
 
 func init() {
-	driver.RegisterDriver("cassandra", &Driver{})
+	driver.RegisterDriver("cassandra", driver.NewDriverGenerator(
+		func() driver.Driver { return &Driver{} }))
 }

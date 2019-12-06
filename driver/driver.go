@@ -38,6 +38,29 @@ type Driver interface {
 	Version() (uint64, error)
 }
 
+type DriverGenerator struct {
+	fnGenerator   func() Driver
+	fnInitOptions []func(Driver)
+}
+
+func NewDriverGenerator(fn func() Driver) *DriverGenerator {
+	return &DriverGenerator{
+		fnGenerator: fn,
+	}
+}
+
+func (dg *DriverGenerator) RegisterInitFunction(fnInit func(Driver)) {
+	dg.fnInitOptions = append(dg.fnInitOptions, fnInit)
+}
+
+func (dg *DriverGenerator) Generate() Driver {
+	res := dg.fnGenerator()
+	for _, option := range dg.fnInitOptions {
+		option(res)
+	}
+	return res
+}
+
 type InitializeParams struct {
 	MongoSSlParams MongoSSlOptions
 }
@@ -56,10 +79,11 @@ func New(url string, initOptions ...func(*InitializeParams)) (Driver, error) {
 		return nil, err
 	}
 
-	d := GetDriver(u.Scheme)
-	if d == nil {
+	gen, exists := GetDriverGenerator(u.Scheme)
+	if !exists {
 		return nil, fmt.Errorf("Driver '%s' not found.", u.Scheme)
 	}
+	d := gen.Generate()
 	verifyFilenameExtension(u.Scheme, d)
 	if err := d.Initialize(url, initOptions...); err != nil {
 		return nil, err

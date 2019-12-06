@@ -127,5 +127,6 @@ func (driver *Driver) Version() (uint64, error) {
 }
 
 func init() {
-	driver.RegisterDriver("sqlite3", &Driver{})
+	driver.RegisterDriver("sqlite3", driver.NewDriverGenerator(
+		func() driver.Driver { return &Driver{} }))
 }

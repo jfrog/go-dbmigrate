@@ -52,7 +52,8 @@ func (d *Driver) SetMethodsReceiver(r interface{}) error {
 }
 
 func init() {
-	driver.RegisterDriver("generic", &Driver{})
+	driver.RegisterDriver("generic", driver.NewDriverGenerator(
+		func() driver.Driver { return &Driver{} }))
 }
 
 func (driver *Driver) Initialize(url string, initOptions ...func(*driver.InitializeParams)) error {

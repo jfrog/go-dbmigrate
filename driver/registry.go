@@ -6,15 +6,15 @@ import (
 )
 
 var driversMu sync.Mutex
-var drivers = make(map[string]Driver)
+var drivers = make(map[string]*DriverGenerator)
 
 // Registers a driver so it can be created from its name. Drivers should
 // call this from an init() function so that they registers themselvse on
 // import
-func RegisterDriver(name string, driver Driver) {
+func RegisterDriver(name string, driver *DriverGenerator) {
 	driversMu.Lock()
 	defer driversMu.Unlock()
-	if driver == nil {
+	if driver.fnGenerator == nil {
 		panic("driver: Register driver is nil")
 	}
 	if _, dup := drivers[name]; dup {
@@ -24,11 +24,11 @@ func RegisterDriver(name string, driver Driver) {
 }
 
 // Retrieves a registered driver by name
-func GetDriver(name string) Driver {
+func GetDriverGenerator(name string) (*DriverGenerator, bool) {
 	driversMu.Lock()
 	defer driversMu.Unlock()
-	driver := drivers[name]
-	return driver
+	driver, ok := drivers[name]
+	return driver, ok
 }
 
 // Drivers returns a sorted list of the names of the registered drivers.

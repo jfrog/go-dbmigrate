@@ -86,7 +86,11 @@ func TestMigrate(t *testing.T) {
 
 	driverUrl := "mongodb://" + host + ":" + port
 
-	d0 := driver.GetDriver("mongodb")
+	gen, ok := driver.GetDriverGenerator("mongodb")
+	if !ok {
+		t.Fatal("MongoDb driver has not been registered")
+	}
+	d0 := gen.Generate()
 	d, ok := d0.(*mongodb.Driver)
 	if !ok {
 		t.Fatal("MongoDbGoMethodsDriver has not registered")

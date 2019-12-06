@@ -62,7 +62,8 @@ func (d *Driver) SetMethodsReceiver(r interface{}) error {
 }
 
 func init() {
-	driver.RegisterDriver("mongodb", &Driver{})
+	driver.RegisterDriver("mongodb", driver.NewDriverGenerator(
+		func() driver.Driver { return &Driver{} }))
 }
 
 type DbMigration struct {
