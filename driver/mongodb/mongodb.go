@@ -38,7 +38,7 @@ type Driver struct {
 	methodsReceiver MethodsReceiver
 	migrator        gomethods.Migrator
 	Url             string
-	sslOptions      driver.MongoSSlOptions
+	sslOptions      SSlOptions
 }
 
 var _ gomethods.GoMethodsDriver = (*Driver)(nil)
@@ -71,7 +71,24 @@ type DbMigration struct {
 	Version uint64        `bson:"version"`
 }
 
-func (d *Driver) Initialize(url string, initOptions ...func(*driver.InitializeParams)) error {
+type SSlOptions struct {
+	SSlMode        bool
+	ClientCertPath string
+	ClientKeyPath  string
+	CaFilePath     string
+}
+
+func WithMongoSsl(mongoSSlOptions SSlOptions) func(driver.Driver) {
+	return func(d driver.Driver) {
+		mongoDriver, ok := d.(*Driver)
+		if !ok {
+			return
+		}
+		mongoDriver.sslOptions = mongoSSlOptions
+	}
+}
+
+func (d *Driver) Initialize(url string, initOptions ...func(driver.Driver)) error {
 	if d.methodsReceiver == nil {
 		return UnregisteredMethodsReceiverError(DRIVER_NAME)
 	}
@@ -80,14 +97,9 @@ func (d *Driver) Initialize(url string, initOptions ...func(*driver.InitializePa
 		return errors.New("invalid mongodb:// scheme")
 	}
 	d.Url = url
-	if len(initOptions) > 0 {
-		options := &driver.InitializeParams{}
-		for _, option := range initOptions {
-			option(options)
-		}
-		d.sslOptions = options.MongoSSlParams
+	for _, option := range initOptions {
+		option(d)
 	}
-
 	if err := d.reconnectToMasterSession(); err != nil {
 		return fmt.Errorf("failed to connect to session: %v", err)
 	}

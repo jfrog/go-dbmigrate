@@ -56,7 +56,7 @@ func init() {
 		func() driver.Driver { return &Driver{} }))
 }
 
-func (driver *Driver) Initialize(url string, initOptions ...func(*driver.InitializeParams)) error {
+func (driver *Driver) Initialize(url string, initOptions ...func(driver.Driver)) error {
 	if driver.methodsReceiver == nil {
 		return UnregisteredMethodsReceiverError(DRIVER_NAME)
 	}

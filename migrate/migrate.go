@@ -18,7 +18,7 @@ import (
 )
 
 // Up applies all available migrations
-func Up(pipe chan interface{}, url, migrationsPath string, initOptions ...func(*driver.InitializeParams)) {
+func Up(pipe chan interface{}, url, migrationsPath string, initOptions ...func(driver.Driver)) {
 	d, files, version, err := initDriverAndReadMigrationFilesAndGetVersion(url, migrationsPath, initOptions...)
 	if err != nil {
 		go pipep.Close(pipe, err)
@@ -57,7 +57,7 @@ func Up(pipe chan interface{}, url, migrationsPath string, initOptions ...func(*
 }
 
 // UpSync is synchronous version of Up
-func UpSync(url, migrationsPath string, initOptions ...func(*driver.InitializeParams)) (err []error, ok bool) {
+func UpSync(url, migrationsPath string, initOptions ...func(driver.Driver)) (err []error, ok bool) {
 	pipe := pipep.New()
 	go Up(pipe, url, migrationsPath, initOptions...)
 	err = pipep.ReadErrors(pipe)
@@ -65,7 +65,7 @@ func UpSync(url, migrationsPath string, initOptions ...func(*driver.InitializePa
 }
 
 // Down rolls back all migrations
-func Down(pipe chan interface{}, url, migrationsPath string, initOptions ...func(*driver.InitializeParams)) {
+func Down(pipe chan interface{}, url, migrationsPath string, initOptions ...func(driver.Driver)) {
 	d, files, version, err := initDriverAndReadMigrationFilesAndGetVersion(url, migrationsPath, initOptions...)
 	if err != nil {
 		go pipep.Close(pipe, err)
@@ -104,7 +104,7 @@ func Down(pipe chan interface{}, url, migrationsPath string, initOptions ...func
 }
 
 // DownSync is synchronous version of Down
-func DownSync(url, migrationsPath string, initOptions ...func(*driver.InitializeParams)) (err []error, ok bool) {
+func DownSync(url, migrationsPath string, initOptions ...func(driver.Driver)) (err []error, ok bool) {
 	pipe := pipep.New()
 	go Down(pipe, url, migrationsPath, initOptions...)
 	err = pipep.ReadErrors(pipe)
@@ -112,7 +112,7 @@ func DownSync(url, migrationsPath string, initOptions ...func(*driver.Initialize
 }
 
 // Redo rolls back the most recently applied migration, then runs it again.
-func Redo(pipe chan interface{}, url, migrationsPath string, initOptions ...func(*driver.InitializeParams)) {
+func Redo(pipe chan interface{}, url, migrationsPath string, initOptions ...func(driver.Driver)) {
 	pipe1 := pipep.New()
 	go Migrate(pipe1, url, migrationsPath, -1, initOptions...)
 	if ok := pipep.WaitAndRedirect(pipe1, pipe, handleInterrupts()); !ok {
@@ -124,7 +124,7 @@ func Redo(pipe chan interface{}, url, migrationsPath string, initOptions ...func
 }
 
 // RedoSync is synchronous version of Redo
-func RedoSync(url, migrationsPath string, initOptions ...func(*driver.InitializeParams)) (err []error, ok bool) {
+func RedoSync(url, migrationsPath string, initOptions ...func(driver.Driver)) (err []error, ok bool) {
 	pipe := pipep.New()
 	go Redo(pipe, url, migrationsPath, initOptions...)
 	err = pipep.ReadErrors(pipe)
@@ -132,27 +132,27 @@ func RedoSync(url, migrationsPath string, initOptions ...func(*driver.Initialize
 }
 
 // Reset runs the down and up migration function
-func Reset(pipe chan interface{}, url, migrationsPath string, initOptions ...func(*driver.InitializeParams)) {
+func Reset(pipe chan interface{}, url, migrationsPath string, initOptions ...func(driver.Driver)) {
 	pipe1 := pipep.New()
 	go Down(pipe1, url, migrationsPath)
 	if ok := pipep.WaitAndRedirect(pipe1, pipe, handleInterrupts()); !ok {
 		go pipep.Close(pipe, nil)
 		return
 	} else {
-		go Up(pipe, url, migrationsPath)
+		go Up(pipe, url, migrationsPath, initOptions...)
 	}
 }
 
 // ResetSync is synchronous version of Reset
-func ResetSync(url, migrationsPath string) (err []error, ok bool) {
+func ResetSync(url, migrationsPath string, initOptions ...func(driver.Driver)) (err []error, ok bool) {
 	pipe := pipep.New()
-	go Reset(pipe, url, migrationsPath)
+	go Reset(pipe, url, migrationsPath, initOptions...)
 	err = pipep.ReadErrors(pipe)
 	return err, len(err) == 0
 }
 
 // Migrate applies relative +n/-n migrations
-func Migrate(pipe chan interface{}, url, migrationsPath string, relativeN int, initOptions ...func(*driver.InitializeParams)) {
+func Migrate(pipe chan interface{}, url, migrationsPath string, relativeN int, initOptions ...func(driver.Driver)) {
 	d, files, version, err := initDriverAndReadMigrationFilesAndGetVersion(url, migrationsPath, initOptions...)
 	if err != nil {
 		go pipep.Close(pipe, err)
@@ -190,7 +190,7 @@ func Migrate(pipe chan interface{}, url, migrationsPath string, relativeN int, i
 }
 
 // MigrateSync is synchronous version of Migrate
-func MigrateSync(url, migrationsPath string, relativeN int, initOptions ...func(*driver.InitializeParams)) (err []error, ok bool) {
+func MigrateSync(url, migrationsPath string, relativeN int, initOptions ...func(driver.Driver)) (err []error, ok bool) {
 	pipe := pipep.New()
 	go Migrate(pipe, url, migrationsPath, relativeN, initOptions...)
 	err = pipep.ReadErrors(pipe)
@@ -198,7 +198,7 @@ func MigrateSync(url, migrationsPath string, relativeN int, initOptions ...func(
 }
 
 // Version returns the current migration version
-func Version(url, migrationsPath string, initOptions ...func(*driver.InitializeParams)) (version uint64, err error) {
+func Version(url, migrationsPath string, initOptions ...func(driver.Driver)) (version uint64, err error) {
 	d, err := driver.New(url, initOptions...)
 	if err != nil {
 		return 0, err
@@ -210,7 +210,7 @@ func Version(url, migrationsPath string, initOptions ...func(*driver.InitializeP
 }
 
 // Create creates new migration files on disk
-func Create(url, migrationsPath, name string, initOptions ...func(*driver.InitializeParams)) (*file.MigrationFile, error) {
+func Create(url, migrationsPath, name string, initOptions ...func(driver.Driver)) (*file.MigrationFile, error) {
 	d, err := driver.New(url, initOptions...)
 	if err != nil {
 		return nil, err
@@ -266,7 +266,7 @@ func Create(url, migrationsPath, name string, initOptions ...func(*driver.Initia
 
 // initDriverAndReadMigrationFilesAndGetVersion is a small helper
 // function that is common to most of the migration funcs
-func initDriverAndReadMigrationFilesAndGetVersion(url, migrationsPath string, initOptions ...func(*driver.InitializeParams)) (driver.Driver, *file.MigrationFiles, uint64, error) {
+func initDriverAndReadMigrationFilesAndGetVersion(url, migrationsPath string, initOptions ...func(driver.Driver)) (driver.Driver, *file.MigrationFiles, uint64, error) {
 	d, err := driver.New(url, initOptions...)
 	if err != nil {
 		return nil, nil, 0, err

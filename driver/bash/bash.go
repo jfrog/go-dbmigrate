@@ -9,7 +9,7 @@ import (
 type Driver struct {
 }
 
-func (driver *Driver) Initialize(url string, initOptions ...func(*driver.InitializeParams)) error {
+func (driver *Driver) Initialize(url string, initOptions ...func(driver.Driver)) error {
 	return nil
 }
 

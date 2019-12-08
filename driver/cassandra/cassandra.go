@@ -45,7 +45,7 @@ const (
 //
 // Example:
 // cassandra://localhost/SpaceOfKeys?protocol=4
-func (driver *Driver) Initialize(rawurl string, initOptions ...func(*driver.InitializeParams)) error {
+func (driver *Driver) Initialize(rawurl string, initOptions ...func(driver.Driver)) error {
 	u, err := url.Parse(rawurl)
 
 	cluster := gocql.NewCluster(u.Host)

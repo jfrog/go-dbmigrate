@@ -23,7 +23,7 @@ type Driver struct {
 
 const tableName = "schema_migrations"
 
-func (driver *Driver) Initialize(url string, initOptions ...func(*driver.InitializeParams)) error {
+func (driver *Driver) Initialize(url string, initOptions ...func(driver.Driver)) error {
 	urlWithoutScheme := strings.SplitN(url, "mysql://", 2)
 	if len(urlWithoutScheme) != 2 {
 		return errors.New("invalid mysql:// scheme")

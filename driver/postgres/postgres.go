@@ -22,7 +22,7 @@ type Driver struct {
 
 const tableName = "schema_migrations"
 
-func (driver *Driver) Initialize(url string, initOptions ...func(*driver.InitializeParams)) error {
+func (driver *Driver) Initialize(url string, initOptions ...func(driver.Driver)) error {
 	db, err := sql.Open("postgres", url)
 	if err != nil {
 		return err
