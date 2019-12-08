@@ -26,7 +26,7 @@ func RegisterMethodsReceiverForDriver(driverName string, receiver interface{}) {
 	driverObj := gen.Generate()
 	_, ok := driverObj.(GoMethodsDriver)
 	if !ok {
-		panic("Go methods: Trying to register receisver for non go methods driver " + driverName)
+		panic("Go methods: Trying to register receiver for non go methods driver " + driverName)
 	}
 
 	gen.RegisterInitFunction(func(d driver.Driver) {
