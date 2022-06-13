@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jfrog/go-dbmigrate/driver"
 	"github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
 	"github.com/jfrog/go-dbmigrate/file"
 	"github.com/jfrog/go-dbmigrate/migrate/direction"
-	_ "github.com/lib/pq"
 	neturl "net/url" // alias to allow `url string` func signature in New
 	"reflect"
 )
@@ -72,7 +72,7 @@ func (driver *Driver) Initialize(url string, initOptions ...func(driver.Driver))
 		return errors.New("db_migrations_database query parameter was not provider")
 	case "postgres":
 		schema = "postgres"
-		driverName = "postgres"
+		driverName = "pgx"
 	}
 	if schema == "" {
 		return fmt.Errorf("Could not deduce db migration database schema from url %s", url)
@@ -109,7 +109,7 @@ func (driver *Driver) ensureConnectionNotClosed() error {
 		return pingErr
 	}
 
-	db, err := sql.Open("postgres", driver.url)
+	db, err := sql.Open("pgx", driver.url)
 	if err != nil {
 		return err
 	}
