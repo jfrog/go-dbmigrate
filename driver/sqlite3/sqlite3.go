@@ -19,7 +19,7 @@ type Driver struct {
 
 const tableName = "schema_migration"
 
-func (driver *Driver) Initialize(url string) error {
+func (driver *Driver) Initialize(url string, initOptions ...func(driver.Driver)) error {
 	filename := strings.SplitN(url, "sqlite3://", 2)
 	if len(filename) != 2 {
 		return errors.New("invalid sqlite3:// scheme")
@@ -127,5 +127,6 @@ func (driver *Driver) Version() (uint64, error) {
 }
 
 func init() {
-	driver.RegisterDriver("sqlite3", &Driver{})
+	driver.RegisterDriver("sqlite3", driver.NewDriverGenerator(
+		func() driver.Driver { return &Driver{} }))
 }

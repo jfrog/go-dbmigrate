@@ -2,26 +2,28 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
-
+	"github.com/jackc/pgconn"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jfrog/go-dbmigrate/driver"
 	"github.com/jfrog/go-dbmigrate/file"
 	"github.com/jfrog/go-dbmigrate/migrate/direction"
-	"github.com/lib/pq"
 )
 
 type Driver struct {
-	db  *sql.DB
-	url string
+	db       *sql.DB
+	url      string
+	isLocked bool
 }
 
 const tableName = "schema_migrations"
+const driverName = "pgx"
 
-func (driver *Driver) Initialize(url string) error {
-	db, err := sql.Open("postgres", url)
+func (driver *Driver) Initialize(url string, initOptions ...func(driver.Driver)) error {
+	db, err := sql.Open(driverName, url)
 	if err != nil {
 		return err
 	}
@@ -46,7 +48,7 @@ func (driver *Driver) ensureConnectionNotClosed() error {
 		return pingErr
 	}
 
-	db, err := sql.Open("postgres", driver.url)
+	db, err := sql.Open(driverName, driver.url)
 	if err != nil {
 		return err
 	}
@@ -64,7 +66,60 @@ func (driver *Driver) Close() error {
 	return nil
 }
 
-func (driver *Driver) ensureVersionTableExists() error {
+// https://www.postgresql.org/docs/9.6/static/explicit-locking.html#ADVISORY-LOCKS
+func (p *Driver) Lock() error {
+	if p.isLocked {
+		return driver.ErrLocked
+	}
+
+	aid, err := driver.GenerateAdvisoryLockId("xraydb", "migrate-postgres")
+	if err != nil {
+		return err
+	}
+
+	// This will wait indefinitely until the lock can be acquired.
+	query := `SELECT pg_advisory_lock($1)`
+	if _, err := p.db.ExecContext(context.Background(), query, aid); err != nil {
+		return fmt.Errorf("Postgres try lock failed: %v", err)
+	}
+
+	p.isLocked = true
+	return nil
+}
+
+func (p *Driver) Unlock() error {
+	if !p.isLocked {
+		return nil
+	}
+
+	aid, err := driver.GenerateAdvisoryLockId("xraydb", "migrate-postgres")
+	if err != nil {
+		return err
+	}
+
+	query := `SELECT pg_advisory_unlock($1)`
+	if _, err := p.db.ExecContext(context.Background(), query, aid); err != nil {
+		return fmt.Errorf("Postgres try unlock failed: %v", err)
+	}
+	p.isLocked = false
+	return nil
+}
+
+func (driver *Driver) ensureVersionTableExists() (err error) {
+	if err := driver.Lock(); err != nil {
+		return err
+	}
+
+	defer func() {
+		if e := driver.Unlock(); e != nil {
+			if err == nil {
+				err = e
+			} else {
+				err = fmt.Errorf("Error1: %v, Error2: %v", err, e)
+			}
+		}
+	}()
+
 	if _, err := driver.db.Exec("CREATE TABLE IF NOT EXISTS " + tableName + " (version int not null primary key);"); err != nil {
 		return err
 	}
@@ -113,14 +168,18 @@ func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 	}
 
 	if _, err := tx.Exec(string(f.Content)); err != nil {
-		pqErr := err.(*pq.Error)
-		offset, err := strconv.Atoi(pqErr.Position)
-		if err == nil && offset >= 0 {
-			lineNo, columnNo := file.LineColumnFromOffset(f.Content, offset-1)
-			errorPart := file.LinesBeforeAndAfter(f.Content, lineNo, 5, 5, true)
-			pipe <- errors.New(fmt.Sprintf("%s %v: %s in line %v, column %v:\n\n%s", pqErr.Severity, pqErr.Code, pqErr.Message, lineNo, columnNo, string(errorPart)))
+		pgError, ok := err.(*pgconn.PgError)
+		if ok {
+			position := int(pgError.Position)
+			if position >= 0 {
+				lineNo, columnNo := file.LineColumnFromOffset(f.Content, position-1)
+				errorPart := file.LinesBeforeAndAfter(f.Content, lineNo, 5, 5, true)
+				pipe <- errors.New(fmt.Sprintf("%s %v: %s in line %v, column %v:\n\n%s", pgError.Severity, pgError.Code, pgError.Message, lineNo, columnNo, string(errorPart)))
+			} else {
+				pipe <- errors.New(fmt.Sprintf("%s %v: %s", pgError.Severity, pgError.Code, pgError.Message))
+			}
 		} else {
-			pipe <- errors.New(fmt.Sprintf("%s %v: %s", pqErr.Severity, pqErr.Code, pqErr.Message))
+			pipe <- err
 		}
 
 		if err := tx.Rollback(); err != nil {
@@ -153,5 +212,6 @@ func (driver *Driver) Version() (uint64, error) {
 }
 
 func init() {
-	driver.RegisterDriver("postgres", &Driver{})
+	driver.RegisterDriver("postgres", driver.NewDriverGenerator(
+		func() driver.Driver { return &Driver{} }))
 }

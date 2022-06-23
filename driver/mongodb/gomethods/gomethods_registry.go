@@ -18,22 +18,29 @@ func RegisterMethodsReceiverForDriver(driverName string, receiver interface{}) {
 		panic("Go methods: Register receiver object is nil")
 	}
 
-	driver := driver.GetDriver(driverName)
-	if driver == nil {
+	gen, exists := driver.GetDriverGenerator(driverName)
+	if !exists {
 		panic("Go methods: Trying to register receiver for not registered driver " + driverName)
 	}
 
-	methodsDriver, ok := driver.(GoMethodsDriver)
+	driverObj := gen.Generate()
+	_, ok := driverObj.(GoMethodsDriver)
 	if !ok {
 		panic("Go methods: Trying to register receiver for non go methods driver " + driverName)
 	}
 
-	if methodsDriver.MethodsReceiver() != nil {
-		panic("Go methods: Methods receiver already registered for driver " + driverName)
-	}
+	gen.RegisterInitFunction(func(d driver.Driver) {
+		methodsDriver, ok := d.(GoMethodsDriver)
+		if !ok {
+			panic("Go methods: Trying to register receiver for non go methods driver " + driverName)
+		}
+		if methodsDriver.MethodsReceiver() != nil {
+			panic("Go methods: Methods receiver already registered for driver " + driverName)
+		}
 
-	if err := methodsDriver.SetMethodsReceiver(receiver); err != nil {
-		panic(fmt.Sprintf("Go methods: Failed to set methods receiver for driver %s\nError: %v",
-			driverName, err))
-	}
+		if err := methodsDriver.SetMethodsReceiver(receiver); err != nil {
+			panic(fmt.Sprintf("Go methods: Failed to set methods receiver for driver %s\nError: %v",
+				driverName, err))
+		}
+	})
 }

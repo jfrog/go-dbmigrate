@@ -8,13 +8,17 @@ import (
 	"github.com/jfrog/go-dbmigrate/file"
 )
 
+var (
+	ErrLocked = fmt.Errorf("can't acquire lock")
+)
+
 // Driver is the interface type that needs to implemented by all drivers.
 type Driver interface {
 
 	// Initialize is the first function to be called.
 	// Check the url string and open and verify any connection
 	// that has to be made.
-	Initialize(url string) error
+	Initialize(url string, initOptions ...func(Driver)) error
 
 	// Close is the last function to be called.
 	// Close any open connection here.
@@ -34,19 +38,43 @@ type Driver interface {
 	Version() (uint64, error)
 }
 
+type DriverGenerator struct {
+	fnGenerator   func() Driver
+	fnInitOptions []func(Driver)
+}
+
+func NewDriverGenerator(fn func() Driver) *DriverGenerator {
+	return &DriverGenerator{
+		fnGenerator: fn,
+	}
+}
+
+func (dg *DriverGenerator) RegisterInitFunction(fnInit func(Driver)) {
+	dg.fnInitOptions = append(dg.fnInitOptions, fnInit)
+}
+
+func (dg *DriverGenerator) Generate() Driver {
+	res := dg.fnGenerator()
+	for _, option := range dg.fnInitOptions {
+		option(res)
+	}
+	return res
+}
+
 // New returns Driver and calls Initialize on it
-func New(url string) (Driver, error) {
+func New(url string, initOptions ...func(Driver)) (Driver, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err
 	}
 
-	d := GetDriver(u.Scheme)
-	if d == nil {
+	gen, exists := GetDriverGenerator(u.Scheme)
+	if !exists {
 		return nil, fmt.Errorf("Driver '%s' not found.", u.Scheme)
 	}
+	d := gen.Generate()
 	verifyFilenameExtension(u.Scheme, d)
-	if err := d.Initialize(url); err != nil {
+	if err := d.Initialize(url, initOptions...); err != nil {
 		return nil, err
 	}
 

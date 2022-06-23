@@ -45,7 +45,7 @@ const (
 //
 // Example:
 // cassandra://localhost/SpaceOfKeys?protocol=4
-func (driver *Driver) Initialize(rawurl string) error {
+func (driver *Driver) Initialize(rawurl string, initOptions ...func(driver.Driver)) error {
 	u, err := url.Parse(rawurl)
 
 	cluster := gocql.NewCluster(u.Host)
@@ -167,5 +167,6 @@ func (driver *Driver) Version() (uint64, error) {
 }
 
 func init() {
-	driver.RegisterDriver("cassandra", &Driver{})
+	driver.RegisterDriver("cassandra", driver.NewDriverGenerator(
+		func() driver.Driver { return &Driver{} }))
 }

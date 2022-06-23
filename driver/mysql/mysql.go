@@ -23,7 +23,7 @@ type Driver struct {
 
 const tableName = "schema_migrations"
 
-func (driver *Driver) Initialize(url string) error {
+func (driver *Driver) Initialize(url string, initOptions ...func(driver.Driver)) error {
 	urlWithoutScheme := strings.SplitN(url, "mysql://", 2)
 	if len(urlWithoutScheme) != 2 {
 		return errors.New("invalid mysql:// scheme")
@@ -181,5 +181,7 @@ func (driver *Driver) Version() (uint64, error) {
 }
 
 func init() {
-	driver.RegisterDriver("mysql", &Driver{})
+	driver.RegisterDriver("mysql", driver.NewDriverGenerator(
+		func() driver.Driver { return &Driver{} }))
+
 }

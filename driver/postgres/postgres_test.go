@@ -18,7 +18,7 @@ func TestMigrate(t *testing.T) {
 	driverUrl := "postgres://postgres@" + host + ":" + port + "/template1?sslmode=disable"
 
 	// prepare clean database
-	connection, err := sql.Open("postgres", driverUrl)
+	connection, err := sql.Open(driverName, driverUrl)
 	if err != nil {
 		t.Fatal(err)
 	}
