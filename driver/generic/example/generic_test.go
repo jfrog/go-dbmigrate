@@ -8,10 +8,10 @@ import (
 	"github.com/jfrog/go-dbmigrate/file"
 	"github.com/jfrog/go-dbmigrate/migrate/direction"
 
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jfrog/go-dbmigrate/driver/generic"
 	"github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
 	pipep "github.com/jfrog/go-dbmigrate/pipe"
-	_ "github.com/lib/pq"
 	"os"
 	"reflect"
 	"time"
@@ -93,7 +93,7 @@ func TestMigrate(t *testing.T) {
 	driverUrl := "generic://postgres@" + host + ":" + port + "/template1?sslmode=disable&migrations_db_type=postgres"
 
 	// prepare clean database
-	connection, err := sql.Open("postgres", migrationsDbUrl)
+	connection, err := sql.Open("pgx", migrationsDbUrl)
 	if err != nil {
 		t.Fatal(err)
 	}
