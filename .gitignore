@@ -2,5 +2,3 @@
 test.db
 *.iml
 .idea
-/go-dbmigrate
-/migrater

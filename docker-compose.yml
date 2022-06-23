@@ -1,6 +1,6 @@
 go: &go
   image: golang
-  working_dir: /go/src/github.com/gineshkumar/go-dbmigrate
+  working_dir: /go/src/github.com/jfrog/go-dbmigrate
   volumes:
     - $GOPATH:/go
 go-test:
@@ -17,7 +17,7 @@ go-build:
   environment:
     CGO_ENABLED: 1
 postgres:
-  image: releases-docker.jfrog.io/jfrog/xray-postgres:9.5.2
+  image: postgres
 mysql:
   image: mysql
   environment:
