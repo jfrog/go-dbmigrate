@@ -11,6 +11,7 @@ import (
 	"github.com/jfrog/go-dbmigrate/driver"
 	"github.com/jfrog/go-dbmigrate/file"
 	"github.com/jfrog/go-dbmigrate/migrate/direction"
+	"strings"
 )
 
 type Driver struct {
@@ -59,8 +60,14 @@ func (driver *Driver) ensureConnectionNotClosed() error {
 	return nil
 }
 
-func (driver *Driver) Close() error {
-	if err := driver.db.Close(); err != nil {
+func (p *Driver) Close() error {
+	if err := p.db.Close(); err != nil {
+		//https://github.com/jackc/pgx/issues/984
+		//In Azure Pgx is throwing an error while the close is called on a connection.
+		//The code below will wrap a custom error type, which will allow the consumer to ignore it.
+		if strings.Contains(err.Error(), "failed to send closeNotify alert (but connection was closed anyway): write tcp") {
+			return fmt.Errorf(err.Error()+": %w", driver.ErrConnectionAlreadyClosed)
+		}
 		return err
 	}
 	return nil

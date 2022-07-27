@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	ErrLocked = fmt.Errorf("can't acquire lock")
+	ErrLocked                  = fmt.Errorf("can't acquire lock")
+	ErrConnectionAlreadyClosed = fmt.Errorf("connection already closed")
 )
 
 // Driver is the interface type that needs to implemented by all drivers.
