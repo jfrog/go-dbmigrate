@@ -10,7 +10,7 @@ import (
 
 var (
 	ErrLocked                  = fmt.Errorf("can't acquire lock")
-	ErrConnectionAlreadyClosed = fmt.Errorf("connection already closed")
+	ErrFailedToSendCloseNotify = fmt.Errorf("failed to send closeNotify alert, please see https://github.com/jackc/pgx/issues/984 for more details")
 )
 
 // Driver is the interface type that needs to implemented by all drivers.
