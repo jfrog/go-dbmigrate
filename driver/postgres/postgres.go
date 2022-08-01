@@ -59,9 +59,9 @@ func (driver *Driver) ensureConnectionNotClosed() error {
 	return nil
 }
 
-func (driver *Driver) Close() error {
-	if err := driver.db.Close(); err != nil {
-		return err
+func (p *Driver) Close() error {
+	if err := p.db.Close(); err != nil {
+		return driver.WrapErrFailedToSendCloseNotify(err)
 	}
 	return nil
 }
