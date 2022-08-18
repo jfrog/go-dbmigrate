@@ -60,8 +60,8 @@ func (driver *Driver) ensureConnectionNotClosed() error {
 }
 
 func (p *Driver) Close() error {
-	if err := p.db.Close(); err != nil {
-		return driver.WrapErrFailedToSendCloseNotify(err)
+	if err := p.db.Close(); !driver.CanIgnoreError(err) {
+		return err
 	}
 	return nil
 }

@@ -18,12 +18,16 @@ func GenerateAdvisoryLockId(databaseName string, additionalNames ...string) (str
 	return fmt.Sprint(sum), nil
 }
 
-func WrapErrFailedToSendCloseNotify(err error) error {
-	//https://github.com/jackc/pgx/issues/984
-	//In Azure Pgx is throwing an error while the close is called on a connection.
-	//The code below will wrap a custom error type, which will allow the consumer to ignore it.
-	if strings.Contains(err.Error(), "failed to send closeNotify alert (but connection was closed anyway)") {
-		return fmt.Errorf(err.Error()+": %w", ErrFailedToSendCloseNotify)
+func CanIgnoreError(err error) bool {
+	if err == nil {
+		return true
 	}
-	return err
+	//https://github.com/jackc/pgx/issues/984
+	//In Azure, Pgx is throwing an error while closing the connection.
+	//We are ignoring this error, as the connection was closed anyway.
+	if strings.Contains(err.Error(), "failed to send closeNotify alert (but connection was closed anyway)") {
+		return true
+	}
+
+	return false
 }
