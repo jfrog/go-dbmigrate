@@ -9,8 +9,7 @@ import (
 )
 
 var (
-	ErrLocked                  = fmt.Errorf("can't acquire lock")
-	ErrFailedToSendCloseNotify = fmt.Errorf("failed to send closeNotify alert, please see https://github.com/jackc/pgx/issues/984 for more details")
+	ErrLocked = fmt.Errorf("can't acquire lock")
 )
 
 // Driver is the interface type that needs to implemented by all drivers.
