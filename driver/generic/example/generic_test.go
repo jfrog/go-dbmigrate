@@ -8,7 +8,7 @@ import (
 	"github.com/jfrog/go-dbmigrate/file"
 	"github.com/jfrog/go-dbmigrate/migrate/direction"
 
-	_ "github.com/jackc/pgx/v4/stdlib"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jfrog/go-dbmigrate/driver/generic"
 	"github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
 	pipep "github.com/jfrog/go-dbmigrate/pipe"
