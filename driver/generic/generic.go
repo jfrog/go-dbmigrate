@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	_ "github.com/jackc/pgx/v4/stdlib"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jfrog/go-dbmigrate/driver"
 	"github.com/jfrog/go-dbmigrate/driver/mongodb/gomethods"
 	"github.com/jfrog/go-dbmigrate/file"
